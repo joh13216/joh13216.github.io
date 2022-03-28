@@ -1,0 +1,130 @@
+---
+title: "Your Title Here"
+author: "Your Name"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include = FALSE, echo = FALSE}
+library(tidyverse)
+library(lubridate)
+library(gt)
+library(paletteer)
+library(plotly)
+library(flexdashboard)
+
+#Working directory for .RMD
+knitr::opts_knit$set(echo = TRUE,
+                     root.dir = rprojroot::find_rstudio_root_file())
+
+#Controlling figure output in markdown
+knitr::opts_chunk$set(
+#  fig.height =   
+  fig.width = 6,
+#  fig.asp = .5,
+  out.width = "90%",
+#  out.height = 
+ fig.align  = "center",
+  cache = FALSE,
+  eval  = TRUE,
+  echo  = TRUE,
+  warning = FALSE
+)
+
+#My Colours (from viridis)
+my_purple <- "#440154FF"
+my_yellow <- "#FDE725FF"
+
+#Set Theme for ggplot2
+theme_set(theme_bw() + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom"))
+
+#Set Scientific notation output and decimal places for knitr
+options(scipen = 999)
+options(digits = 4)
+options(dplyr.summarise.inform = FALSE)
+```
+
+
+```{r data_read, include = FALSE}
+#Read in the nyc airbnb data set
+nyc_airbnb.df <- read_csv("./data/nyc_airbnb.csv", show_col_types = FALSE) %>%
+  mutate(rating = review_scores_location / 2) %>%
+  filter(
+    neighbourhood_group %in% "Manhattan",
+    room_type %in% "Entire home/apt",
+    (!is.na(rating)),
+    price <= 1000
+  ) %>%
+  dplyr::select(neighbourhood, rating, price,
+                room_type, lat, long, contains("review"))
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+data(mtcars)
+hist(mtcars$mpg)
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+disney.df %>%
+  group_by(branch, date) %>%
+  summarise(
+    avg_rating = mean(rating)
+  ) %>%
+  drop_na() %>%
+  ungroup() %>%
+  mutate(branch = fct_reorder(branch, avg_rating, .desc = TRUE)) %>%
+  ggplot(aes(x = ymd(date), y = avg_rating, colour = branch, fill = branch)) +
+  stat_smooth(alpha   = 0.2, 
+              size    = 1.2, 
+              method  = "loess",
+              formula = "y ~ x",
+              span    = 0.2,
+              se      = FALSE) +
+  geom_point(alpha    = 0.24, 
+             position = "jitter",
+             size     = 2, 
+             shape    = 16) +
+  labs(
+    x = "Year",
+    y = "Average Rating",
+    title = "Average Rating by Branch from 2010-2019"
+  ) + 
+  annotate(geom = "text",
+           x = ymd("2013-07-1"), 
+           y = 4.66,
+           label  = "Mean Trend",
+           #family = "AvantGarde",
+           colour = my_purple) +
+  scale_colour_viridis_d("Disneyland Branch") +
+  scale_fill_viridis_d("Disneyland Branch") +
+  scale_x_date(
+    date_breaks = "1 year",
+    date_minor_breaks = "1 year",
+    date_labels = "%Y"
+  ) +
+  theme(axis.text.x = element_text(angle = 45,
+                                   vjust = 1.24,
+                                   hjust = 1.2,
+                                   size  = 11),
+        axis.text.y = element_text(size  = 11)) +
+  ylim(c(3, 5))
+```
+
+### Chart C
+
+```{r}
+hist(mtcars$disp)
+```
+

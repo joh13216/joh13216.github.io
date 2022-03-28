@@ -1,0 +1,73 @@
+---
+title: "Resume"
+output: html_document
+---
+
+**ANTHONY C. JOHNSON**
+
+7316 Auto Club Road, Bloomington, MN 55438 · 612-791-0639 ·
+[ajohnson465213\@gmail.com](mailto:ajohnson465213@gmail.com){.email}
+
+**EDUCATION**
+
+**University of Minnesota School of Public Health**, Minneapolis, MN
+
+Master of Science in Biostatistics. Expected May 2022
+
+**University of Minnesota**, Minneapolis, MN Bachelor of Science,
+
+Mathematics (Physiology Concentration), May 2020
+
+Relevant Coursework: Calculus (1-4), Theory of Probability, Stochastic
+Processes, Applied Linear Algebra, Math Modeling, Advanced Regression,
+Survival Analysis, Clinical Trials, Statistical Consulting, Programming
+in R
+
+**EXPERIENCE**
+
+**University of Minnesota**, Minneapolis, MN Fall and Spring 2021-22
+
+*Teaching Assistant*\
+• Graded quizzes for Biostatistical Literacy class
+
+• Monitored online problem sets
+
+**Energy Print**, St. Paul, MN Summer 2021
+
+*Data Entry Provider*
+
+• Entered data from energy bills for an energy management company
+
+**Menards**, Richfield, MN Summer 2017, Summer 2018, and Summer 2019
+
+*Courtesy Patrol*
+
+• Served customer's needs, such as by assisting with heavy purchases
+
+• Managed shopping cart supply by returning shopping carts from parking
+lot to store
+
+**SuperAmerica**, Minneapolis, MN Summer 2016
+
+*Customer Service Representative*
+
+• Operated the cash register to ensure an easy checkout experience
+
+• Restocked shelves and freezer supplies
+
+**VOLUNTEER AND OTHER EXPERIENCES**
+
+**Feed my Starving Children**, Eagan, MN
+
+• Prepared meals for those who needed them
+
+**Wright State University**, Dayton, OH August 19 to August 23, 2019
+
+• Shadowed my aunt Dr. Kathrin Engisch in her neuroscience lab
+
+• Sat in on meetings and experiments
+
+**Turkey Bingo,** Minneapolis, MN
+
+• Collected tickets for bingo and gave out prizes for bingo at St.
+Lawrence Catholic Church in Dinkytown for Thanksgiving.

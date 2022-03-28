@@ -1,0 +1,22 @@
+---
+title: "Anthony Johnson"
+---
+
+<div style= "float : left; position : relative; top: 0px; width : 450px; height : 360px; padding-right: 24px; margin-bottom : 0px">
+![Me](./images/Professional_Photo.jpg)
+
+</div>
+
+<font size = "4"> 
+This is the professional website of Anthony Johnson. I received my BS from the University of Minnesota in 2020 for mathematics. I am currently trying to get an MS in biostatistics at the University of Minnesota. I enjoy using R for data science and making visualizations in R.
+</font>  
+  
+  
+  
+<font size = "4">
+I am great at making brackets for March Madness.
+</font>
+
+>“Never put off till tomorrow what you can do the day after tomorrow just as well.”
+—Mark Twain
+

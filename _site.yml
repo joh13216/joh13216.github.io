@@ -1,0 +1,28 @@
+name: "Yay internet!"
+header-includes: 
+  \usepackage{graphicx}
+  \usepackage{float}
+output_dir: "."
+navbar:
+  title: "Home"
+  right:
+    - text: "Recent Work"
+      menu:
+          - text: "Flexdashboard"
+            href: flexdashboard.html
+    - text: "Documents"
+      menu:
+          - text: "Resume"
+            href: resume.html
+    - text: "About"
+      href: about.html
+    - icon: fa-envelope fa-lg
+      href: mailto:<joh13216@umn.edu>
+    - icon: fa-github fa-lg
+      href: https://github.com/joh13216/
+    - icon: fa-brands fa-linkedin
+      href: https://www.linkedin.com
+      
+output:  
+   html_document:
+    theme: flatly

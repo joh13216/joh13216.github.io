@@ -1,0 +1,200 @@
+---
+title: "Flexdashboard"
+author: "Anthony Johnson"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include = FALSE, echo = FALSE}
+library(tidyverse)
+library(lubridate)
+library(gt)
+library(paletteer)
+library(plotly)
+library(flexdashboard)
+
+#Working directory for .RMD
+knitr::opts_knit$set(echo = TRUE,
+                     root.dir = rprojroot::find_rstudio_root_file())
+
+#Controlling figure output in markdown
+knitr::opts_chunk$set(
+#  fig.height =   
+  fig.width = 6,
+#  fig.asp = .5,
+  out.width = "90%",
+#  out.height = 
+ fig.align  = "center",
+  cache = FALSE,
+  eval  = TRUE,
+  echo  = TRUE,
+  warning = FALSE
+)
+
+#My Colours (from viridis)
+my_purple <- "#440154FF"
+my_yellow <- "#FDE725FF"
+
+#Set Theme for ggplot2
+theme_set(theme_bw() + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom"))
+
+#Set Scientific notation output and decimal places for knitr
+options(scipen = 999)
+options(digits = 4)
+options(dplyr.summarise.inform = FALSE)
+```
+
+
+```{r data_read, include = FALSE}
+disney.df <- read_csv("./data/disneyland_reviews.csv",
+                      na = c("missing"),
+                      show_col_types = FALSE) %>%
+             janitor::clean_names() %>%
+             rename(
+               id       = review_id,
+               text     = review_text, #trimming unnecessary review_
+               location = reviewer_location
+             ) %>% 
+             mutate( #Time
+               id    = as.factor(id),
+               date  = lubridate::ym(year_month), #Cleaning up time as date, y/m factors
+               year  = lubridate::year(date) %>% #See the lubridate package
+                       as.factor(),
+               month = month.name[lubridate::month(date)] %>%
+                       as.factor()
+             ) %>%
+             mutate( #Text analysis
+               n_words    = str_split(text, " ") %>% #proxy for number of words
+                            map_dbl(length),
+               avg_length = str_split(text, " ") %>% #proxy for average length
+                            map(str_length) %>% 
+                            map_dbl(mean),
+               n_unique   = str_split(text, " ") %>% #proxy for no. unique words
+                            map(unique) %>%
+                            map_dbl(length),
+               branch     = str_split(branch, "_") %>% #extracting branch w stringr
+                            map_chr(2) %>%
+                            as.factor() %>%
+                            fct_recode("Hong Kong" = "HongKong") %>%
+                            fct_relevel("California", "Paris")
+             ) %>%
+             dplyr::select(id, rating, location, branch, everything(), -c(year_month, text))
+
+library(readr)
+instacart.df <- read_csv("data/instacart.csv")
+```
+
+Column {data-width=550}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r, include=FALSE}
+dep_names <- instacart.df %>%
+  mutate(department = str_to_title(department)) %>%
+  count(department) %>%
+  arrange(desc(n)) %>%
+  head(6) #Take top 6 departments
+```
+```{r, message=FALSE, include=FALSE}
+instacart.gg <- instacart.df %>%
+  mutate(department = str_to_title(department), aisle = str_to_title(aisle), department = factor(department), aisle = factor(aisle)) %>%
+  filter(department %in% dep_names$department) %>% #Filter to only have the top 6 departments
+  group_by(department) %>%
+  count(aisle) %>%
+  slice_max(order_by = n, n = 6) %>% #Take top 6 aisles
+  summarize(n = n, aisle = aisle, tot_n = sum(n)) %>% #Need to add in a total for each department
+  ungroup() %>%
+  mutate(aisle = fct_reorder(aisle, desc(n))) %>%
+  mutate(aisle = fct_reorder(aisle, desc(tot_n))) %>% #These order the variables the way we want them
+  mutate(text_label = str_c(department, "\nAisle - ", aisle, 
+                            "\n# of Items - ", n)) %>%
+  ggplot(aes(x = aisle, y = n, fill = fct_reorder(department, desc(tot_n)), text = text_label)) +
+  geom_col() +
+  labs(title = "Top 6 Aisles in Top 6 Departments by Items Purchased", x = "Aisle", y = "# of Items", fill = "Department") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r, echo=FALSE}
+ggplotly(instacart.gg, tooltip = "text")
+```
+
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+
+
+```{r, include=FALSE}
+norm_random_sample <- tibble(x = rnorm(1000, 0, 1), y = rnorm(1000, 1, 2), 
+                             sum_indicator = ifelse(x + y > 0.5, TRUE, FALSE))
+
+# Change the data and then plot it
+norm_random_sample %>%
+  mutate(sum_indicator = factor(sum_indicator, labels = c("No", "Yes"))) %>%
+  mutate(sum_indicator = fct_relevel(sum_indicator,"Yes")) %>%
+  ggplot(aes(x = x, y = y, color = sum_indicator)) +
+  geom_point() +
+  labs(title = "Independent Bivariate Normal Random Sample", color = "X + Y > 0.5") +
+  xlab("Random Sample N(0, 1)") + 
+  ylab("Random Sample N(1, 2)")
+legendtitle <- list(yref='paper',xref="paper",y=1.05,x=1.1, text="Cylinders",showarrow=F)
+```
+
+
+```{r, echo=FALSE}
+norm_random_sample %>%
+  mutate(sum_indicator = factor(sum_indicator, labels = c("X + Y < 0.5", "X + Y > 0.5"))) %>%
+  mutate(sum_indicator = fct_relevel(sum_indicator,"X + Y > 0.5")) %>%
+  plot_ly(x = ~x, y = ~y, type = "scatter", mode = "markers", color = ~sum_indicator, text = ~sum_indicator) %>%
+  layout(title = "Independent Bivariate Normal Random Sample", xaxis = list(title = "Random Sample N(0, 1)"), yaxis = list(title = "Random Sample N(1, 2)", legend = list(title = "X + Y > 0.5"), annotations = legendtitle)) %>%
+  hide_legend()
+```
+
+### Chart C
+
+```{r, include=FALSE}
+disney_text.gg <- disney.df %>%
+  filter(
+    n_words <= 1000,
+    n_unique <= 750,
+    avg_length <= 6,
+    avg_length >= 3
+  ) %>%              #to handle outliers rigorously
+  pivot_longer(
+    cols      = contains(c("n_", "avg")), #Turning text analysis vars from wide to long
+    names_to  = "text_var",
+    values_to = "measurement"
+  ) %>%
+  mutate(
+    text_var = case_when(
+                text_var %in% "n_words"  ~ "Word Count",
+                text_var %in% "n_unique" ~ "Unique Word Count", #Recoding variable w meaningful names
+                TRUE                     ~ "Avg. Word Length"
+                ) %>%
+                as_factor()
+  ) %>%
+  mutate(text_label = str_c("Meausurement - ", measurement, 
+                            "\nRating - ", rating)) %>%
+  ggplot(aes(x = measurement, colour = as.factor(rating), fill = as.factor(rating))) +
+  geom_density(adjust = 2, alpha = 0.44, position = "stack", aes(label = measurement, label2 = rating)) +
+  labs(
+    x = "Observed Measurement",
+    y = "Rating 1-5",
+    title = "Text-derived Associations with Rating"
+  ) +
+  scale_colour_viridis_d("Rating") +
+  scale_fill_viridis_d("Rating") +
+  facet_wrap(~ text_var, scales = "free", labeller = labeller(text_var = label_wrap_gen(width = 17))) +
+  theme(axis.text.x = element_text(angle = 90), strip.text.x = element_text(size = 5))
+
+```
+
+```{r, echo=FALSE}
+ggplotly(disney_text.gg, tooltip = c("density", "measurement", "rating"))
+```
+
