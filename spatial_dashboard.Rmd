@@ -110,7 +110,7 @@ age.gg <- ggplot() +
 #Display
 ggplotly(age.gg,
          tooltip = "text",
-         height  = 550,
+         height  = 500,
          width   = 700) %>%
     style(hoveron = "fills")
 ```
