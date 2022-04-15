@@ -1,0 +1,371 @@
+---
+title: "Spatial Dashboard"
+author: "Anthony Johnson"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include = FALSE, echo = FALSE}
+library(tidyverse)
+library(lubridate)
+library(gt)
+library(paletteer)
+library(plotly)
+library(flexdashboard)
+library(osmdata)
+library(ggmap)
+library(ggthemes)
+library(leaflet)
+library(tidycensus)
+library(sf)
+
+#Working directory for .RMD
+knitr::opts_knit$set(echo = TRUE,
+                     root.dir = rprojroot::find_rstudio_root_file())
+
+#Controlling figure output in markdown
+knitr::opts_chunk$set(
+#  fig.height =   
+  fig.width = 6,
+#  fig.asp = .5,
+  out.width = "90%",
+#  out.height = 
+ fig.align  = "center",
+  cache = FALSE,
+  eval  = TRUE,
+  echo  = TRUE,
+  warning = FALSE
+)
+
+#My Colours (from viridis)
+my_purple <- "#440154FF"
+my_yellow <- "#FDE725FF"
+
+#Set Theme for ggplot2
+theme_set(theme_bw() + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom"))
+
+#Set Scientific notation output and decimal places for knitr
+options(scipen = 999)
+options(digits = 4)
+options(dplyr.summarise.inform = FALSE)
+```
+
+
+```{r data_read, include = FALSE}
+
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+```{r, include=FALSE}
+census_api_key("5f4b9af4e9196bcccdadd3f781f294f14a46d9b5")
+```
+
+```{r, include=FALSE}
+
+options(tigris_use_cache = TRUE)
+
+#Call the ACS API, returns a sf object
+mn_age.df <- get_acs(
+  geography = "block group",
+  variables = "B01002_001", #Code for median age
+  state     = "MN",
+  county    = "Hennepin",
+  year      = 2020,
+  geometry  = TRUE
+)
+```
+
+```{r, include=FALSE}
+#Add a text label to mn_age.df
+mn_age_plotly.df <- mn_age.df %>%
+  mutate(
+    bg      = str_split(NAME, ",") %>%
+                 map_chr(1) %>% str_remove("Block Group"),
+    nam = str_c(NAME, "1"),
+    text_label = str_c("Median Age: ",estimate, " years"
+                 )
+  )
+#Generate the ggplot
+age.gg <- ggplot() + 
+  geom_sf(data = mn_age_plotly.df, 
+          aes(fill = estimate, text = text_label),
+          colour = "black", size = 0.1) + 
+  labs(title = "Hennepin County, MN 2020 ACS Median Age") + 
+  scale_fill_viridis_c("Median Age") +
+  theme_map() +
+  theme(
+    plot.title   = element_text(size  = 16,
+                                hjust = 0.5),
+    legend.text  = element_text(size = 16),
+    legend.title = element_text(size = 16),
+    legend.position = "right"
+  )
+
+
+#Display
+ggplotly(age.gg,
+         tooltip = "text",
+         height  = 550,
+         width   = 700) %>%
+    style(hoveron = "fills")
+```
+
+```{r, include=FALSE}
+hennepin.box     <- osmdata::getbb("hennepin")
+hennepin.outline <- osmdata::getbb("hennepin", format_out = "polygon")[[1]] %>%
+  as_tibble() %>%
+  rename(longitude = V1, latitude = V2)
+
+
+#Get map from ggmap
+#Get the base map (foundational layer)
+hennepin_base.map <- get_map(
+                location = hennepin.box,
+                source   = "google",
+                maptype  = "roadmap",
+                crop = TRUE
+               )
+
+#Create the base map
+hennepin_base.gg <- ggmap(hennepin_base.map) +
+  geom_polygon(data = hennepin.outline, aes(x = longitude, y = latitude), colour = "black", size = 1.6, alpha = 0.1) +
+  theme_map() +
+  theme(
+    plot.title   = element_text(size  = 16,
+                                hjust = 0.5),
+    legend.text  = element_text(size = 16),
+    legend.title = element_text(size = 16),
+    legend.position = "right"
+  )
+    
+#Display base map
+hennepin_base.gg
+
+```
+
+```{r, echo=FALSE}
+coord_ggmap <- st_crs(hennepin_base.gg) #NA
+coord_sf    <- st_crs(mn_age_plotly.df) #NAD83
+
+#Overlay thge sf info from tidycensus ACS income estimates
+mn_age.ggmap <- hennepin_base.gg +  
+  geom_sf(data = mn_age_plotly.df, 
+          aes(fill = estimate, text = text_label),
+          colour = "black", size = 0.1,
+          inherit.aes = FALSE) + 
+  labs(title = "Hennepin County, MN 2020 ACS Median Age") + 
+  scale_fill_viridis_c("Median Age") +
+  theme_map() +
+  theme(
+    plot.title   = element_text(size  = 16,
+                                hjust = 0.5),
+    legend.text  = element_text(size = 16),
+    legend.title = element_text(size = 16),
+    legend.position = "right"
+  )
+#Display plotly
+ggplotly(mn_age.ggmap,
+         tooltip = "text",
+         height  = 600,
+         width   = 800) %>%
+    style(hoveron = "fills")
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+
+```{r, include=FALSE}
+osm_shop_sf.df <- opq(bbox = "minnesota", timeout = 60) %>%
+             add_osm_feature(key = "shop", value = c("bakery", "butcher", "deli")) %>%
+osmdata_sf()
+```
+
+```{r, include=FALSE}
+shop_points.df <- osm_shop_sf.df$osm_points %>% 
+  janitor::clean_names() %>%
+  filter(!is.na(shop)) %>% #only retain 'valid' tags
+  dplyr::select(osm_id, name, shop, opening_hours, phone, website, geometry) %>%
+  mutate(shop = str_to_title(shop) %>% as_factor())
+```
+
+```{r, include=FALSE}
+mn.box <- osmdata::getbb("minnesota")
+mn.outline <- osmdata::getbb("minnesota", format_out = "polygon")[[1]] %>%
+  as_tibble() %>%
+  rename(longitude = V1, latitude = V2)
+```
+
+```{r, include=FALSE}
+mn_base.map <- get_map(
+                location = mn.box,
+                source   = "google",
+                maptype  = "roadmap",
+                crop = TRUE
+               )
+```
+
+```{r, include=FALSE}
+#Create the base map
+mn_base.gg <- ggmap(mn_base.map) +
+  geom_polygon(data = mn.outline, aes(x = longitude, y = latitude), colour = "black", size = 1.6, alpha = 0.1) +
+  theme_map() +
+  theme(
+    plot.title   = element_text(size  = 16,
+                                hjust = 0.5),
+    legend.text  = element_text(size = 16),
+    legend.title = element_text(size = 16),
+    legend.position = "right"
+  )
+```
+
+```{r, include=FALSE}
+#Call viridis library  
+library(viridis, quietly = TRUE)
+
+#Extract the levels/order of shop type factor
+shop_types <- levels(shop_points.df$shop)
+n_types    <- length(shop_types)
+
+#Initialize our colour pallete (discrete in this case)
+my_pallete <- colorFactor(viridis_pal(option = "D")(n_types), domain = shop_types)
+
+#Call our leaflet
+leaflet(data = shop_points.df) %>%
+  addProviderTiles('OpenStreetMap.Mapnik') %>% 
+  addCircleMarkers(
+    color   = ~my_pallete(shop_types),
+    opacity = 0.4,
+    weight  = 2, #outline strength
+    radius  = 4 #size of circle
+  ) %>%
+  addLegend(
+    title    = "Store Type",
+    position = "bottomright",
+    colors   = viridis_pal(option = "D")(n_types),
+    labels   = shop_types 
+  )
+```
+
+```{r, echo=FALSE}
+#Need html tools to get our labels to render appropriately
+library(htmltools, quietly = TRUE)
+
+#Add a text label like normal
+shop_label.df <- shop_points.df %>%
+  mutate(
+    text_label = str_c(
+                   name,
+                   "<br/>Store Type: ",
+                   shop,
+                   "<br/>Open Hours: ",
+                   opening_hours,
+                   "<br/>Phone: ",
+                   phone,
+                   "<br/>Website: ",
+                   website
+                 )
+  )
+
+#Redisplay the leaflet
+leaflet(data = shop_label.df) %>%
+  addProviderTiles('OpenStreetMap.Mapnik') %>% 
+  addCircleMarkers(
+    color   = ~my_pallete(shop_types),
+    label   = ~map(text_label, HTML), #map over labels, make html
+    opacity = 0.4, #alpha
+    weight  = 2, #outline strength
+    radius  = 4 #size of circle
+  ) %>%
+  addLegend(
+    title    = "Store Type",
+    position = "bottomright",
+    colors   = viridis_pal(option = "D")(n_types),
+    labels   = shop_types 
+  )
+```
+### Chart C
+
+```{r, include=FALSE}
+osm_club_sf.df <- opq(bbox = "minnesota") %>%
+             add_osm_feature(key = "amenity", value = c("stripclub", "swingerclub", "nightclub")) %>%
+osmdata_sf()
+```
+
+
+```{r, include=FALSE}
+club_points.df <- osm_club_sf.df$osm_points %>% 
+  janitor::clean_names() %>%
+  filter(!is.na(amenity)) %>% #only retain 'valid' tags
+  dplyr::select(osm_id, name, amenity, opening_hours, phone, website, geometry) %>%
+  mutate(amenity = str_to_title(amenity) %>% as_factor())
+```
+
+
+```{r, include=FALSE}
+#Call viridis library  
+library(viridis, quietly = TRUE)
+
+#Extract the levels/order of shop type factor
+club_types <- levels(club_points.df$amenity)
+n_types    <- length(club_types)
+
+#Initialize our colour pallete (discrete in this case)
+my_pallete <- colorFactor(viridis_pal(option = "D")(n_types), domain = club_types)
+
+#Call our leaflet
+leaflet(data = club_points.df) %>%
+  addProviderTiles('OpenStreetMap.Mapnik') %>% 
+  addCircleMarkers(
+    color   = ~my_pallete(club_types),
+    opacity = 0.4,
+    weight  = 2, #outline strength
+    radius  = 4 #size of circle
+  ) %>%
+  addLegend(
+    title    = "Club Type",
+    position = "bottomright",
+    colors   = viridis_pal(option = "D")(n_types),
+    labels   = club_types 
+  )
+```
+
+```{r, echo=FALSE}
+#Need html tools to get our labels to render appropriately
+library(htmltools, quietly = TRUE)
+
+#Add a text label like normal
+club_label.df <- club_points.df %>%
+  mutate(
+    text_label = str_c(
+                   name,
+                   "<br/>Club Type: ",
+                   amenity
+                 )
+  )
+
+#Redisplay the leaflet
+leaflet(data = club_label.df) %>%
+  addProviderTiles('OpenStreetMap.Mapnik') %>% 
+  addCircleMarkers(
+    color   = ~my_pallete(club_types),
+    label   = ~map(text_label, HTML), #map over labels, make html
+    opacity = 0.4, #alpha
+    weight  = 2, #outline strength
+    radius  = 4 #size of circle
+  ) %>%
+  addLegend(
+    title    = "Club Type",
+    position = "bottomright",
+    colors   = viridis_pal(option = "D")(n_types),
+    labels   = club_types 
+  )
+```
+
