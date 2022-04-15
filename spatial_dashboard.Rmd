@@ -110,7 +110,7 @@ age.gg <- ggplot() +
 #Display
 ggplotly(age.gg,
          tooltip = "text",
-         height  = 500,
+         height  = 530,
          width   = 700) %>%
     style(hoveron = "fills")
 ```
@@ -171,8 +171,8 @@ mn_age.ggmap <- hennepin_base.gg +
 #Display plotly
 ggplotly(mn_age.ggmap,
          tooltip = "text",
-         height  = 600,
-         width   = 800) %>%
+         height  = 550,
+         width   = 700) %>%
     style(hoveron = "fills")
 ```
 
